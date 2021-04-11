@@ -33,6 +33,8 @@ public:
 	void normalize();
 
 	const vector<glm::vec3>& faces() const { return fv; }
+	const vector<glm::vec3>& vertices() const { return v; }
 	const vector<glm::vec3>& normals() const { return fvn; }
 	const vector<glm::vec3>& texcoord() const { return fvt; }
+
 };

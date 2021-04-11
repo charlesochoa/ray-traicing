@@ -1,8 +1,7 @@
 PROG=ogl
 SRCS= \
-main.cc \
 obj.cc \
-world.cc
+main.cc
 
 CXX:=g++
 CXXFLAGS:=-O3 -march=native

@@ -1,1 +1,1 @@
-main.o: main.cc world.h
+main.o: main.cc color.h ray.h obj.h

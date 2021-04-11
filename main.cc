@@ -1,199 +1,125 @@
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
-#include <GL/gl.h>
+#include "color.h"
+#include "ray.h"
 #include <vector>
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/transform.hpp>
+#include <glm/gtx/polar_coordinates.hpp>
+#include <GL/glew.h>
+#include <GL/gl.h>
+#include <GL/glu.h>
+#include "obj.h"
 #include <iostream>
-#include <cmath>
-#include "world.h"
 
-void ogl_info(GLFWwindow* win);
-void ogl_init(GLFWwindow* win);
-void ogl_reshape(GLFWwindow* win,int width,int height);
-void ogl_display(GLFWwindow* win);
+unsigned int size;
 
-void keyboard(GLFWwindow* win,int key,int s,int act,int mod);
-void mouse(GLFWwindow* win,int but,int act,int mod);
-void motion(GLFWwindow* win,double x,double y);
-void scroll(GLFWwindow* win,double x,double y);
+OBJ obj;
 
-using namespace std;
-
-int main(int argc,char* argv[])
-{
-	glfwInit();
-
-	glfwWindowHint(GLFW_CLIENT_API,GLFW_OPENGL_API);
-	glfwWindowHint(GLFW_OPENGL_PROFILE,GLFW_OPENGL_CORE_PROFILE);
-	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT,GL_TRUE);
-
-	GLFWwindow* win;
-	vector<int> vers = { 46,45,44,43,42,41,40,33 };
-	for (auto v : vers)
-	{
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR,v/10);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR,v%10);
-		win = glfwCreateWindow(384,256,"OpenGL",NULL,NULL);
-		if (win!=nullptr)
-			break;
-	}
-	if (win==nullptr)
-		return 0;
-	ogl_info(win);
-
-	ogl_init(win);
-
-	glfwSetFramebufferSizeCallback(win,ogl_reshape);
-	glfwSetWindowRefreshCallback(win,ogl_display);
-
-	glfwSetKeyCallback(win,keyboard);
-	glfwSetMouseButtonCallback(win,mouse);
-	glfwSetScrollCallback(win,scroll);
-
-	while (!glfwWindowShouldClose(win))
-	{
-		glfwWaitEvents();
-	}
-
-	glfwTerminate();
-
-	return 0;
+float dotProduct(glm::vec3 a, glm::vec3 b) {
+    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
 
-void ogl_info(GLFWwindow* win)
+bool RayIntersectsTriangle(ray* pixelRay,
+                           glm::vec3* inTriangle,
+                           glm::vec3* outIntersectionPoint)
 {
-	glfwMakeContextCurrent(win);
-
-	cout << "GL: " << glGetString(GL_VERSION) << endl;
-	cout << "SL: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
-	cout << flush;
+    const float EPSILON = 0.0000001;
+    glm::vec3 vertex0 = inTriangle[0];
+    glm::vec3 vertex1 = inTriangle[1];
+    glm::vec3 vertex2 = inTriangle[2];
+    glm::vec3 edge1, edge2, h, s, q;
+    float a,f,u,v;
+    edge1 = vertex1 - vertex0;
+    edge2 = vertex2 - vertex0;
+    h = pixelRay->direction()*edge2;
+    a = dotProduct(edge1, h);
+    if (a > -EPSILON && a < EPSILON)
+        return false;    // This ray is parallel to this triangle.
+    f = 1.0/a;
+    s = pixelRay->origin() - vertex0;
+    u = f * dotProduct(s, h);
+    if (u < 0.0 || u > 1.0)
+        return false;
+    q = s * edge1;
+    v = f * dotProduct(pixelRay->direction(), q);
+    if (v < 0.0 || u + v > 1.0)
+        return false;
+    // At this stage we can compute t to find out where the intersection point is on the line.
+    float t = f * dotProduct(edge2, q);
+    if (t > EPSILON) // ray intersection
+    {
+        // outIntersectionPoint = pixelRay->at(t);
+        return true;
+    }
+    else // This means that there is a line intersection but not a ray intersection.
+        return false;
 }
 
-void ogl_init(GLFWwindow* win)
-{
-	glfwMakeContextCurrent(win);
 
-	glewInit();
+// void interpole(glm:vec3* dir) {
+//     dir[0] = (dir[0] - 172.0)/384.0;
+//     dir[1] = (dir[1] - 100.0)/384.0;
+//     dir[2] = -3.0;
+// }
 
-	world_init();
-}
 
-void ogl_reshape(GLFWwindow* win,int w,int h)
-{
-	glfwMakeContextCurrent(win);
 
-	world_reshape(w,h);
-}
 
-void ogl_display(GLFWwindow* win)
-{
-	int w,h;
-	glfwGetWindowSize(win,&w,&h);
+int main() {
 
-	glfwMakeContextCurrent(win);
+    // Image
+    const int image_width = 384;
+    const int image_height = 256;
 
-	world_display(w,h);
+    const float ai = -4.0;
+    const float as = 4.0;
+    const float bi = -2.0;
+    const float ci = -3.0;
+    const float st = 8.0/384.0;
+    
+	glm::mat4 xf = glm::rotate(glm::radians(90.0f),glm::vec3(1.0f,0.0f,0.0f));
 
-	glfwSwapBuffers(win);
-}
+	obj.load("../model/bunny.obj",xf);
+    const vector<glm::vec3> faces = obj.faces();
+    size = obj.faces().size() ;
+    
+    ray *rayo = new ray();
+    // Render
+    ray *rays[image_height][image_width];
+    glm::vec3 intersectionPoints[image_height][image_width];
 
-void keyboard(GLFWwindow* win,int key,int s,int act,int mod)
-{
-	if (act==GLFW_RELEASE)
-		return;
+    std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
 
-	switch (key)
-	{
-		case GLFW_KEY_Q:
-		case GLFW_KEY_ESCAPE:
-			glfwSetWindowShouldClose(win,GL_TRUE);
-			break;
-		case GLFW_KEY_LEFT:
-			world_ph += 1;
-			break;
-		case GLFW_KEY_RIGHT:
-			world_ph -= 1;
-			break;
-		case GLFW_KEY_DOWN:
-			world_th += 1;
-			if (world_th >  89)
-				world_th =  89;
-			break;
-		case GLFW_KEY_UP:
-			world_th -= 1;
-			if (world_th < -89)
-				world_th = -89;
-			break;
-		case GLFW_KEY_A:
-			world_ro *= 0.9;
-			break;
-		case GLFW_KEY_Z:
-			world_ro *= 1.1;
-			break;
-		case GLFW_KEY_R:
-			world_reset_cam();
-			break;
-		case GLFW_KEY_F:
-			world_fill = !world_fill;
-			break;
-		case GLFW_KEY_S:
-			world_pps = !world_pps;
-			break;
-		case GLFW_KEY_E:
-			world_env = !world_env;
-			break;
-		default:
-			cout << "key " << key << "<" << char(key) << ">" << endl;
-			break;
-	}
+    glm::vec3 camera(0.0, 0.0, 8.0);
+    for (int j = image_height-1; j >= 0; --j) {
+        // std::cerr << "\rSize: " << size << ' ' ;
+        // std::cin.ignore();
+        for (int i = 0; i < image_width; ++i) {
+            
+            glm::vec3 direction(ai + float(i)*st, bi + float(j)*st, 3.0);
+            rays[j][i] = new ray(camera, direction);
+            bool intersects = false;
+            glm::vec3 intersectionPoint(0.0, 0.0, 0.0);
+            for ( unsigned int t = 0; t < size; t++ ) {
+                // std::cerr << "\rt: " << t << ' ' ;
+                // std::cin.ignore();
+                glm::vec3 triangle[3] =  {faces[t],faces[t+1],faces[t+2]};
+                intersects = RayIntersectsTriangle(rays[j][i], triangle, &intersectionPoint);
+                // std::cerr << "ray: " << rays[j][i];
 
-	ogl_display(win);
-}
+                if (intersects) {
+                    break;
+                }
+            }
+            if (intersects) {
+                glm::vec3 pixel_color(255.0, 0.0, 0.0);
+                write_color(std::cout, pixel_color);
+            } else {
+                glm::vec3 pixel_color(0.0, 0.0, 0.0);
+                write_color(std::cout, pixel_color);
+            }
+        }
+    }
 
-double lx,ly;
-
-void mouse(GLFWwindow* win,int but,int act,int mod)
-{
-	switch(act)
-	{
-		case GLFW_PRESS:
-			glfwGetCursorPos(win,&lx,&ly);
-//			glfwSetInputMode(win,GLFW_CURSOR,GLFW_CURSOR_DISABLED);
-			glfwSetCursorPosCallback(win,motion);
-			break;
-		case GLFW_RELEASE:
-			glfwSetCursorPosCallback(win,0);
-//			glfwSetInputMode(win,GLFW_CURSOR,GLFW_CURSOR_NORMAL);
-			break;
-	}
-
-	ogl_display(win);
-}
-
-void motion(GLFWwindow* win,double x,double y)
-{
-	int w,h;
-	glfwGetWindowSize(win,&w,&h);
-
-	double dx = (x - lx)/float(w);
-	double dy = (y - ly)/float(h);
-	lx = x;
-	ly = y;
-	world_ph -= 180*dx;
-	world_th +=  90*dy;
-	if (world_th >  89)
-		world_th =  89;
-	if (world_th < -89)
-		world_th = -89;
-
-	ogl_display(win);
-}
-
-void scroll(GLFWwindow* win,double,double z)
-{
-	if (z<0)
-		world_ro *= 0.9;
-	else
-		world_ro *= 1.1;
-
-	ogl_display(win);
+    std::cerr << "\nDone.\n";
 }
