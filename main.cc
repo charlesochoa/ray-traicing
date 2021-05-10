@@ -104,7 +104,8 @@ void print_faces( vector<glm::vec3> faces ) {
 
 int main() {
 
-    for(float angle = 0.0 ; angle <= 540.0 ; angle+= 10.0) {
+    // for(float angle = 0.0 ; angle <= 540.0 ; angle+= 10.0) {
+    for(float z_iter = -5.0 ; z_iter <= 2.0 ; z_iter+= 0.1) {
     const float ai = -1.0;
     const float bi = -1.0;
     const float ci = -1.0;
@@ -123,6 +124,9 @@ int main() {
     float world_th = 30.0;
     float world_ro =  1.0;
 
+
+
+
     /**
      * 
      * 
@@ -130,6 +134,7 @@ int main() {
 	float aspect = float(image_width)/float(image_height);
 
 	glm::mat4 pers = glm::perspective(45.0f,aspect,0.01f,1000.0f);
+	glm::mat4 pers = glm::translate(x,y,z);
 
 	const float ph = glm::radians(0.0);
 	const float th = glm::radians(30.0);
@@ -145,16 +150,16 @@ int main() {
     **/
     
         
-	glm::mat4 xf = glm::rotate(glm::radians(angle),glm::vec3(0.3f,1.0f,0.5f));
+	glm::mat4 xf = glm::rotate(glm::radians(45.0f),glm::vec3(0.3f,1.0f,0.5f));
     // xf = glm::rotate(xf, glm::radians(45.0f),glm::vec3(0.0f,1.0f,0.0f));
-	obj.load("../model/cube.obj",xf);
+	obj.load("model/cube.obj",xf);
     const vector<glm::vec3> faces = obj.faces();
     const vector<glm::vec3> vertices = obj.vertices();
-    // print_faces(faces);
+    print_faces(faces);
     size = obj.faces().size() ;
     glm::vec3 triangles[size][3];
     
-    glm::vec3 camera(0.0, 0.0, 0.0);
+    glm::vec3 camera(0.0, 0.0, 2.0);
     for (unsigned int x = 0; x < size; x++) {
         for (unsigned int y = 0; y < 3; y++) {
             triangles[x][y] = faces[x + y];
@@ -176,7 +181,7 @@ int main() {
         // std:cerr << j << "\n";
         for (int i = 0; i < image_width; ++i) {
             
-            glm::vec3 direction(ai + float(i)*st, bi + float(j)*st, 1.0);
+            glm::vec3 direction(ai + float(i)*st, bi + float(j)*st, z_iter);
             // std::cout  << "\rcamera: " << camera[0] << ", " << camera[1] << ", " << camera[2] << "-----   direction: " << direction[0] << ", " << direction[1] << ", " << direction[2] << "\n" ;
 
             rays[j][i] = new ray(camera, direction);
@@ -212,7 +217,7 @@ int main() {
                 glm::vec3 pixel_color(bestInt[0], bestInt[1], bestInt[2]);
 
                 // write_color(std::cout, pixel_color);
-                png_img.set(i, image_height - j -1, 0, 0.3/(m*m), 0.3/(m*m));
+                png_img.set(i, image_height - j -1, 0, 1.0/(m), 1.0/(m));
                 // png_img.set(i, image_height - j -1, tri / float(size), 0.0, 0.0);
             } else {
                 // std::cerr << "\rIntersectionPoint" << "[" << j << "][" << i << "]: no inter\n" ;
