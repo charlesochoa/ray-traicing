@@ -1,6 +1,7 @@
 PROG=ogl
 SRCS= \
 obj.cc \
+png.cc \
 main.cc
 
 CXX:=g++
@@ -10,7 +11,7 @@ CXXFLAGS:=-O3 -march=native
 # Linux
 #LIBS:=-lglfw -lGLEW -lGLU -lGL
 # Win
-LIBS:=-lglfw3 -lglew32 -lglu32 -lopengl32 -lgdi32
+LIBS:=-lglfw3 -lglew32 -lglu32 -lopengl32 -lgdi32 -lpng -lz
 OBJS:=$(SRCS:.cc=.o)
 DEPS:=$(SRCS:.cc=.d)
 
