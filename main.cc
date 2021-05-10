@@ -41,8 +41,6 @@ bool RayIntersectsTriangle(ray* pixelRay,
                            glm::vec3& outIntersectionPoint,
                            float* module)
 {
-    // std::cerr << "\rpixelRay->direction(): " << pixelRay->direction()[0] << ", " << pixelRay->direction()[1] << ", " << pixelRay->direction()[2] << "\n" ;
-
     const float EPSILON = 0.0000001;
     glm::vec3 vertex0 = inTriangle[0];
     glm::vec3 vertex1 = inTriangle[1];
@@ -68,8 +66,6 @@ bool RayIntersectsTriangle(ray* pixelRay,
     float t = f * glm::dot(edge2, q);
     if (t > EPSILON) // ray intersection
     {
-        // std::cerr << "\rT: " << t << "\n" ;
-
         outIntersectionPoint = pixelRay->at(t);
         return true;
     }
@@ -93,141 +89,81 @@ void print_faces( vector<glm::vec3> faces ) {
 }
 
 
-// void interpole(glm:vec3* dir) {
-//     dir[0] = (dir[0] - 172.0)/384.0;
-//     dir[1] = (dir[1] - 100.0)/384.0;
-//     dir[2] = -3.0;
-// }
-
-
-
-
 int main() {
 
-    // for(float angle = 0.0 ; angle <= 540.0 ; angle+= 10.0) {
-    for(float z_iter = -5.0 ; z_iter <= 2.0 ; z_iter+= 0.1) {
-    const float ai = -1.0;
-    const float bi = -1.0;
-    const float ci = -1.0;
+    for(float z_iter = -2.0 ; z_iter <= 5.0 ; z_iter+= 0.2) {
     const float st = 0.005;
-
     const float x_init = -1.0;
     const float x_end = 1.0;
     const float y_init = -1.0;
     const float y_end = 1.0;
     const int image_width = int((x_end - x_init)/st);
     const int image_height = int((y_end - y_init)/st);
-    // Image
-    PNG png_img = PNG(image_width, image_height); 
-        
-    float world_ph =  0.0;
-    float world_th = 30.0;
-    float world_ro =  1.0;
-
-
-
-
-    /**
-     * 
-     * 
-    glm::mat4	view;
 	float aspect = float(image_width)/float(image_height);
-
-	glm::mat4 pers = glm::perspective(45.0f,aspect,0.01f,1000.0f);
-	glm::mat4 pers = glm::translate(x,y,z);
-
-	const float ph = glm::radians(0.0);
-	const float th = glm::radians(30.0);
-
+    PNG png_img = PNG(image_width, image_height); 
+    glm::vec3 light(0,10,0)
+    float world_ph =  10.0;
+    float world_th = 45.0;
+    float world_ro =  1.0;
+	float ph = glm::radians(world_ph);
+	float th = glm::radians(world_th);
 	glm::vec3 axis(cos(ph)*cos(th),sin(ph)*cos(th),sin(th));
-
 	glm::vec3 to(0,0,0);
-	glm::vec3 eye = to*axis;
-	glm::mat4 camera = glm::lookAt(eye,to,glm::vec3(0,0,1));
+	glm::vec3 eye = to + world_ro * axis;
+	glm::mat4 camera4 = glm::lookAt(eye,to,glm::vec3(0,0,1));
+	glm::mat4 pers = glm::perspective(45.0f,aspect,0.01f,1000.0f);
+	glm::mat4 view = pers*camera4;
+    view = glm::translate(view, glm::vec3(-2,-0.5,-2));
 
-	view = pers*camera;
-     * 
-    **/
-    
-        
-	glm::mat4 xf = glm::rotate(glm::radians(45.0f),glm::vec3(0.3f,1.0f,0.5f));
-    // xf = glm::rotate(xf, glm::radians(45.0f),glm::vec3(0.0f,1.0f,0.0f));
-	obj.load("model/cube.obj",xf);
+	obj.load("model/cube.obj",view);
     const vector<glm::vec3> faces = obj.faces();
     const vector<glm::vec3> vertices = obj.vertices();
-    print_faces(faces);
+    const vector<glm::vec3> normals = obj.normals();
     size = obj.faces().size() ;
     glm::vec3 triangles[size][3];
     
-    glm::vec3 camera(0.0, 0.0, 2.0);
+    glm::vec3 camera(0,0,0);
     for (unsigned int x = 0; x < size; x++) {
         for (unsigned int y = 0; y < 3; y++) {
             triangles[x][y] = faces[x + y];
-
         }
     }
-    std::cerr << "\rsize: " << size << ' ' ;
-    
-    // std::cin.ignore();
-    
     ray *rayo = new ray();
-    // Render
     ray *rays[image_height][image_width];
     glm::vec3 intersectionPoints[image_height][image_width];
 
     // std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
     float max_m = -1.0;
     for (int j = 0; j < image_height; ++j) {
-        // std:cerr << j << "\n";
         for (int i = 0; i < image_width; ++i) {
-            
-            glm::vec3 direction(ai + float(i)*st, bi + float(j)*st, z_iter);
-            // std::cout  << "\rcamera: " << camera[0] << ", " << camera[1] << ", " << camera[2] << "-----   direction: " << direction[0] << ", " << direction[1] << ", " << direction[2] << "\n" ;
-
+            glm::vec3 direction(x_init + float(i)*st, y_init + float(j)*st,2);
+            // std::cerr << "direction" << to_string(direction) << "\n";
             rays[j][i] = new ray(camera, direction);
             bool intersects = false;
             float tri = 0.0;
             float m = 5000.0;
             glm::vec3 intersectionPoint(-100000.0, -100000.0, -100000.0);
-            glm::vec3 bestInt(-100000.0, -100000.0, -100000.0);
             for ( GLuint t = 0; t < size; t+= 3 ) {
                 float tmp = 0.0;
                 bool interTemp = false;
                 interTemp = RayIntersectsTriangle(rays[j][i], triangles[t], intersectionPoint, &tmp);
                 if (interTemp) {
                     intersects = true;
-                    tmp = vec3Module(camera, intersectionPoint);
-                    if (tmp < m) {
-                        m = tmp;
-                        bestInt[0] = intersectionPoint[0];
-                        bestInt[1] = intersectionPoint[1];
-                        bestInt[2] = intersectionPoint[2];
-                        tri = float(t);
-                    }
+                    m = std::min(m, vec3Module(camera, intersectionPoint));
                 }
             }
-
             if (intersects ) {
-                // std::cerr << m << "\n";
-                if (m > max_m) {
-                    max_m = m;
-                }
-                // std::cerr << "\rIntersectionPoint" << "[" << j << "][" << i << "]: " << bestInt[0] << ", " << bestInt[1] << ", " << bestInt[2]  << "   ------   With triangle: \n"  ;
-                // print_triangle(triangles[int(tri)]);
-                glm::vec3 pixel_color(bestInt[0], bestInt[1], bestInt[2]);
-
-                // write_color(std::cout, pixel_color);
-                png_img.set(i, image_height - j -1, 0, 1.0/(m), 1.0/(m));
-                // png_img.set(i, image_height - j -1, tri / float(size), 0.0, 0.0);
+                max_m = std::max(max_m, m);
+                png_img.set(i, image_height - j -1, 0, 3.0/(m*m), 10.0/(m*m));
             } else {
-                // std::cerr << "\rIntersectionPoint" << "[" << j << "][" << i << "]: no inter\n" ;
                 glm::vec3 pixel_color(0.0, 0.0, 0.0);
-                // write_color(std::cout, pixel_color);
                 png_img.set(i, image_height - j - 1, 0.0, 0.0, 0.0);
             }
         }
     }
-    std::cerr << "max_m: " << max_m << "\n";
+    // std::cerr << "max_m: " << max_m << "\n";
+    std::cerr << "z_iter: " << z_iter << "\n";
+    
     png_img.save("./res.png");
     
     Sleep(150);
