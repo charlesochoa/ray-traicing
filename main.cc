@@ -171,12 +171,10 @@ int main() {
         glm::mat4 view = pers*camera4;
         view = view*xf;
 
-        obj.load("model/bunny.obj",view);
+        obj.load("model/bb8.obj",view);
         faces = obj.faces();
-        const vector<glm::vec3> vertices = obj.vertices();
         const vector<glm::vec3> normals = obj.normals();
         size = obj.faces().size() ;
-        glm::vec3 triangles[size][3];
         
         glm::vec3 camera(0,0,-4);
         ray *rays[image_height][image_width];
@@ -210,8 +208,6 @@ int main() {
                             bestInter[2] = intersectionPoint[2];
                         }
                     }
-                    
-
                 }
                 if (intersects ) {
                     max_m = std::max(max_m, m);
