@@ -19,6 +19,8 @@ GLuint size;
 
 OBJ obj;
 
+vector<glm::vec3> faces;
+
 float vec3Module(glm::vec3 o, glm::vec3 v) {
     return float(sqrt(pow(o[0] - v[0], 2) + pow(o[1] - v[1], 2) + pow(o[2] - v[2], 2)));
 }
@@ -88,14 +90,14 @@ bool RayIntersectsTriangle(ray* pixelRay,
 }
 
 bool find_intersection( ray* ray, 
-                        glm::vec3 triangles[][3], 
                         GLuint ignoreT) {
     
     glm::vec3 intersectionPoint(0,0,0);
     for ( GLuint t = 0; t < size; t+= 3 ) {
         if (t != ignoreT) {
             float tmp = 0.0;
-            bool interTemp = RayIntersectsTriangle(ray, triangles[t], intersectionPoint, &tmp);
+            glm::vec3 triangle[3] = { faces[t], faces[t+1], faces[t+2] };
+            bool interTemp = RayIntersectsTriangle(ray, triangle, intersectionPoint, &tmp);
             if (interTemp) {
                 return true;
             }
@@ -109,16 +111,16 @@ glm::vec3    light_source(glm::vec3 normal,
                 glm::vec3 light,
                 glm::vec3 intersectionPoint,
                 glm::vec3 lightColor,
-                glm::vec3 triangles[][3],
                 GLuint tri
                 ) {
-    ray *rayo = new ray(intersectionPoint, light);
-    bool shadow = find_intersection(rayo, triangles, tri);
-    if (shadow) {
-        return glm::vec3(0,0,0);
-    }
+    
     float cos = glm::dot(normal, light - intersectionPoint);
     if (cos > 0) {
+        ray *rayo = new ray(intersectionPoint, light);
+        bool shadow = find_intersection(rayo, tri);
+        if (shadow) {
+            return glm::vec3(0,0,0);
+        }
         return lightColor*cos/vec3Module(light, intersectionPoint);
     }
     return glm::vec3(0,0,0);
@@ -169,19 +171,14 @@ int main() {
         glm::mat4 view = pers*camera4;
         view = view*xf;
 
-        obj.load("model/teapot.obj",view);
-        const vector<glm::vec3> faces = obj.faces();
+        obj.load("model/bunny.obj",view);
+        faces = obj.faces();
         const vector<glm::vec3> vertices = obj.vertices();
         const vector<glm::vec3> normals = obj.normals();
         size = obj.faces().size() ;
         glm::vec3 triangles[size][3];
         
         glm::vec3 camera(0,0,-4);
-        for (unsigned int x = 0; x < size; x++) {
-            for (unsigned int y = 0; y < 3; y++) {
-                triangles[x][y] = faces[x + y];
-            }
-        }
         ray *rays[image_height][image_width];
         glm::vec3 intersectionPoints[image_height][image_width];
 
@@ -198,9 +195,10 @@ int main() {
                 float m = 5000.0;
                 glm::vec3 intersectionPoint(-100000.0, -100000.0, -100000.0);
                 glm::vec3 bestInter(-100000.0, -100000.0, -100000.0);
-                for ( GLuint t = 0; t < size; t+= 3 ) {
+                for ( GLuint t = 0; t < size-2; t+= 3 ) {
                     float tmp = 0.0;
-                    interTemp = RayIntersectsTriangle(rays[j][i], triangles[t], intersectionPoint, &tmp);
+                    glm::vec3 triangle[3] = { faces[t], faces[t+1], faces[t+2] };
+                    interTemp = RayIntersectsTriangle(rays[j][i], triangle, intersectionPoint, &tmp);
                     if (interTemp) {
                         intersects = true;
                         tmp = vec3Module(camera, intersectionPoint);
@@ -218,7 +216,7 @@ int main() {
                 if (intersects ) {
                     max_m = std::max(max_m, m);
                     
-                    glm::vec3 radiant_color = light_source(normals[tri], light, bestInter, lightColor, triangles, tri);
+                    glm::vec3 radiant_color = light_source(normals[tri], light, bestInter, lightColor, tri);
                     glm::vec3 pixel_color = render_ecuation ( bestInter, light, normals[tri],lightColor,materialColor, radiant_color);
                     png_img.set(i, image_height - j -1, pixel_color[0], pixel_color[1], pixel_color[2]);
                 } else {
