@@ -1,4 +1,4 @@
-PROG=ogl
+PROG=ogl_venus
 SRCS= \
 obj.cc \
 png.cc \

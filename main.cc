@@ -21,6 +21,9 @@ OBJ obj;
 
 vector<glm::vec3> faces;
 
+glm::vec3 dark(0.01,0.01,0.01);
+
+
 float vec3Module(glm::vec3 o, glm::vec3 v) {
     return float(sqrt(pow(o[0] - v[0], 2) + pow(o[1] - v[1], 2) + pow(o[2] - v[2], 2)));
 }
@@ -119,11 +122,11 @@ glm::vec3    light_source(glm::vec3 normal,
         ray *rayo = new ray(intersectionPoint, light);
         bool shadow = find_intersection(rayo, tri);
         if (shadow) {
-            return glm::vec3(0,0,0);
+            return dark;
         }
         return lightColor*cos/vec3Module(light, intersectionPoint);
     }
-    return glm::vec3(0,0,0);
+    return dark;
 }
 
 void print_triangle( glm::vec3* triangle) {
@@ -143,7 +146,7 @@ void print_faces( vector<glm::vec3> faces ) {
 
 int main() {
     int image_count = 0;
-    for(float z_iter = -20.0 ; z_iter <= 500.0 ; z_iter+= 5) {
+    for(float z_iter = 0.0 ; z_iter <= 360.0 ; z_iter+= 10) {
         image_count += 1;
         const float st = 0.003;
         const float x_init = -1.0;
@@ -154,9 +157,9 @@ int main() {
         const int image_height = int((y_end - y_init)/st);
         float aspect = float(image_width)/float(image_height);
         PNG png_img = PNG(image_width, image_height); 
-        glm::vec3 light(0,2,0);
-        glm::vec3 lightColor(1,1,1);
-        glm::vec3 materialColor(0.4,0.0,7);
+        glm::vec3 light(-0.4,1,-0.3);
+        glm::vec3 lightColor(2,2,2);
+        glm::vec3 materialColor(0.25,0.15,1);
         float world_ph =  0.0;
         float world_th = 30.0;
         float world_ro =  1.0;
@@ -167,16 +170,17 @@ int main() {
         glm::vec3 eye = to + world_ro * axis;
         glm::mat4 camera4 = glm::lookAt(eye,to,glm::vec3(0,0,1));
         glm::mat4 pers = glm::perspective(45.0f,aspect,0.01f,1000.0f);
-        glm::mat4 xf = glm::rotate(glm::radians(z_iter),glm::vec3(0.3f,1.0f,0.5f));
+        glm::mat4 initial = glm::rotate(glm::radians(90.0f),glm::vec3(1.0f,0.0f,0.0f));
+        glm::mat4 xf = glm::rotate(glm::radians(z_iter),glm::vec3(0.0f,0.5f,0.0f));
         glm::mat4 view = pers*camera4;
-        view = view*xf;
+        view = view*initial*xf;
 
-        obj.load("model/bb8.obj",view);
+        obj.load("model/venus.obj",view);
         faces = obj.faces();
         const vector<glm::vec3> normals = obj.normals();
         size = obj.faces().size() ;
         
-        glm::vec3 camera(0,0,-4);
+        glm::vec3 camera(0,0.3,-1.3);
         ray *rays[image_height][image_width];
         glm::vec3 intersectionPoints[image_height][image_width];
 
@@ -216,16 +220,19 @@ int main() {
                     glm::vec3 pixel_color = render_ecuation ( bestInter, light, normals[tri],lightColor,materialColor, radiant_color);
                     png_img.set(i, image_height - j -1, pixel_color[0], pixel_color[1], pixel_color[2]);
                 } else {
-                    png_img.set(i, image_height - j - 1,47.0/255, 54.0/255, 64.0/255);
+                    // png_img.set(i, image_height - j - 1,47.0/255, 54.0/255, 64.0/255);
+                    png_img.set(i, image_height - j - 1,0,0,0);
                 }
             }
+            std::cout << "\rFrame: " << image_count << ",  rows left: " << ' ' << image_height - j << ' ';
         }
-        // std::cerr << "max_m: " << max_m << "\n";
-        std::cerr << "z_iter: " << z_iter << "\n";
         
-        png_img.save("./images/res" + to_string(image_count) +".png");
+        png_img.save("./images_big/res" + to_string(image_count) +".png");
         
         // Sleep(150);
     }
     std::cerr << "\nDone.\n";
 }
+
+
+// z_iter: 485
